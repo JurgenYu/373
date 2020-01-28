@@ -33,6 +33,16 @@ triangle_geometry.computeFaceNormals();
 var triangle = new THREE.Mesh(triangle_geometry, material);
 shapes.push(triangle); // add the triangle to list of shapes
 
+//Newly created cylinder mesh
+var cylinder_geometry = new THREE.CylinderGeometry(0.5, 0.5, 2.0, 100.0);
+var cylinder = new THREE.Mesh(cylinder_geometry, material);
+shapes.push(cylinder);
+
+//Newly created cone mesh
+var cone_geometry = new THREE.ConeGeometry(0.5, 2.0, 100.0);
+var cone = new THREE.Mesh(cone_geometry, material);
+shapes.push(cone);
+
 //Creates torus mesh
 var torus_geometry = new THREE.TorusBufferGeometry(1, 0.4, 16, 100);
 var torus = new THREE.Mesh(torus_geometry, material);
@@ -63,6 +73,7 @@ var tx = 0.0;
 var ty = 0.0;
 var scale = 1.0;
 var angleV = 0.0;
+var angleH = 0.0;
 var isWireframe = false;
 
 //Mouse variables
@@ -111,14 +122,18 @@ function animate() {
 
 function render() {
   // rotate the shape in x, y, z axes respectively
-	currentShape.rotation.setFromVector3(new THREE.Vector3(angleV, 0.0, 0.0));
+	currentShape.rotation.setFromVector3(new THREE.Vector3(angleV, angleH, 0.0));
 	currentShape.scale.set(scale, scale, scale); // uniform scaling
 	currentShape.material.wireframe = isWireframe;
 
   /* Written Question:
    * How does the program detect whether mouse pointer is clicked on the shape?
    * Write your answer here in 1-2 sentences: 
-   *
+   * Answer: The raycaster object is used to picking the camera and the mouse position,
+   * and returns the calculation of the mouse interacting with the object. If the mouse is
+   * considered on the object, the variable intersects now carries a positive value
+   * and makes the clickedOnShape to be true in the if statements
+   * 
    *********************************/
 	if (mouseClicked) {
 	
@@ -135,7 +150,9 @@ function render() {
 	}
 	if (clickedOnShape && mouseButton == 0) { // update vertical rotation angle
 		var dy = mouse.y - prevMouse.y;
+		var dx = mouse.x - prevMouse.x;
 		angleV += dy*0.01;
+		angleH += dx*0.01;
 	}
 	
 	if (clickedOnShape && mouseButton == 2)	{ // update scaling
