@@ -66,12 +66,13 @@ function adjustContrast(input, output, contrast) {
 function adjustSaturation(input, out, saturation) {
 	// ===YOUR CODE STARTS HERE===
 	let ip = input.pixels;
-	let op = output.pixels;
+	let op = out.pixels;
 	for (let i = 0; i < input.width * input.height; i++) {
 		let idx = i * 4;
-		op[idx + 0] = pixelClamp(contrast * ip[idx + 0] + (1 - contrast) * 127);
-		op[idx + 1] = pixelClamp(contrast * ip[idx + 1] + (1 - contrast) * 127);
-		op[idx + 2] = pixelClamp(contrast * ip[idx + 2] + (1 - contrast) * 127);
+		let l = 0.299 * ip[idx + 0] + 0.587 * ip[idx + 1] + 0.114 * ip[idx + 2];
+		op[idx + 0] = pixelClamp(saturation * ip[idx + 0] + (1 - saturation) * l);
+		op[idx + 1] = pixelClamp(saturation * ip[idx + 1] + (1 - saturation) * l);
+		op[idx + 2] = pixelClamp(saturation * ip[idx + 2] + (1 - saturation) * l);
 	}
 	// ---YOUR CODE ENDS HERE---
 }
