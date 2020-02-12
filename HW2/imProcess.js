@@ -21,7 +21,7 @@ let mosaic_names = ['musicBig', 'musicSmall', 'movieBig', 'movieSmall'];
 let mosaic_files = ['musicBig.png', 'musicSmall.png', 'movieBig.png', 'movieSmall.png'];
 let mosaic_img_size = [
 	[24, 24],
-	[12, 12, ],
+	[12, 12,],
 	[24, 45],
 	[12, 23]
 ];
@@ -109,7 +109,12 @@ function edgeDetect(input, output) {
 // Sharpen using the 3x3 kernel we covered in lecture.
 function sharpen(input, output, sharpness) {
 	// ===YOUR CODE STARTS HERE===
-
+	let kernel = [
+		[0, -sharpness, 0],
+		[-sharpness, 1 + 4 * sharpness, -sharpness],
+		[0, -sharpness, 0]
+	]
+	filterImage(input, output, kernel);
 	// ---YOUR CODE ENDS HERE---
 }
 
@@ -120,14 +125,45 @@ function sharpen(input, output, sharpness) {
 // Uniform dithering (quantization)
 function uniformQuantization(input, output) {
 	// ===YOUR CODE STARTS HERE===
-
+	let ip = input.pixels;
+	let op = output.pixels;
+	for (let i = 0; i < input.width * input.height; i++) {
+		let idx = i * 4;
+		let l = 0.299 * ip[idx + 0] + 0.587 * ip[idx + 1] + 0.114 * ip[idx + 2];
+		if (l > 127) {
+			op[idx + 0] = 255;
+			op[idx + 1] = 255;
+			op[idx + 2] = 255;
+		}
+		else {
+			op[idx + 0] = 0;
+			op[idx + 1] = 0;
+			op[idx + 2] = 0;
+		}
+	}
 	// ---YOUR CODE ENDS HERE---
 }
 
 // Random dithering
 function randomDither(input, output) {
 	// ===YOUR CODE STARTS HERE===
-
+	let ip = input.pixels;
+	let op = output.pixels;
+	for (let i = 0; i < input.width * input.height; i++) {
+		let d = Math.random() * 255;
+		let idx = i * 4;
+		let l = 0.299 * ip[idx + 0] + 0.587 * ip[idx + 1] + 0.114 * ip[idx + 2];
+		if (l > d) {
+			op[idx + 0] = 255;
+			op[idx + 1] = 255;
+			op[idx + 2] = 255;
+		}
+		else {
+			op[idx + 0] = 0;
+			op[idx + 1] = 0;
+			op[idx + 2] = 0;
+		}
+	}
 	// ---YOUR CODE ENDS HERE---
 }
 
@@ -141,7 +177,25 @@ function orderedDither(input, output) {
 			[0, 8 / 16.0, 2 / 16.0, 10 / 16.0]
 		];
 	// ===YOUR CODE STARTS HERE===
-
+	let ip = input.pixels;
+	let op = output.pixels;
+	for (let i = 0; i < input.height; i++) {
+		for (let j = 0; j < input.width; j++) {
+			let d = bayers[j % 4][i % 4] * 255;
+			let idx = (i * input.width + j) * 4;
+			let l = 0.299 * ip[idx + 0] + 0.587 * ip[idx + 1] + 0.114 * ip[idx + 2];
+			if (l > d) {
+				op[idx + 0] = 255;
+				op[idx + 1] = 255;
+				op[idx + 2] = 255;
+			}
+			else {
+				op[idx + 0] = 0;
+				op[idx + 1] = 0;
+				op[idx + 2] = 0;
+			}
+		}
+	}
 	// ---YOUR CODE ENDS HERE---
 }
 
@@ -163,7 +217,8 @@ function imageMosaic(input, output, mosaic_name) {
 	// Below you can do any precomputation necessary (it's optional)
 	// to help increase the speed of mosaic computation
 	// ===YOUR CODE STARTS HERE===
-
+	let ip = input.pixels;
+	let op = output.pixels;
 	// ---YOUR CODE ENDS HERE---
 
 	/* The code below already provides the outer two loops (y and x loops). 
@@ -175,7 +230,51 @@ function imageMosaic(input, output, mosaic_name) {
 	(function chunk() {
 		for (x = 0; x <= width - w; x += w) { // x loop
 			// ===YOUR CODE STARTS HERE===
-
+			let best = 0;
+			let t = 0;
+			let scales = [];
+			for (n = 0; n < num; n++) {
+				let cp = mimages[n].pixels;
+				var drb = 0,
+					dgb = 0,
+					dbb = 0;
+				var drm = 0,
+					dgm = 0,
+					dbm = 0;
+				for (j = 0; j < h; j++) {
+					for (i = 0; i < w; i++) {
+						let idx = ((y + j) * width + (x + i)) * 4;
+						let mdx = (j * w + i) * 4;
+						drb += ip[idx + 0] * cp[mdx + 0];
+						drm += cp[mdx + 0] * cp[mdx + 0];
+						dgb += ip[idx + 1] * cp[mdx + 1];
+						dgm += cp[mdx + 1] * cp[mdx + 1];
+						dbb += ip[idx + 2] * cp[mdx + 2];
+						dbm += cp[mdx + 2] * cp[mdx + 2];
+					}
+				}
+				dr = (-Math.pow(drb, 2)) / drm;
+				dg = (-Math.pow(dgb, 2)) / dgm;
+				db = (-Math.pow(dbb, 2)) / dbm;
+				d = dr + dg + db;
+				d = d * ((Math.random() * 2) + 1);
+				if (d < best) {
+					best = d;
+					t = n;
+					scales = [drb / drm, dgb / dgm, dbb / dbm];
+				}
+			}
+			console.log(t);
+			let cp = mimages[t].pixels;
+			for (a = 0; a < h; a++) {
+				for (b = 0; b < w; b++) {
+					let idx = ((y + a) * width + (x + b)) * 4;
+					let mdx = (a * w + b) * 4;
+					op[idx + 0] = pixelClamp(cp[mdx + 0] * scales[0]);
+					op[idx + 1] = pixelClamp(cp[mdx + 1] * scales[1]);
+					op[idx + 2] = pixelClamp(cp[mdx + 2] * scales[2]);
+				}
+			}
 			// ---YOUR CODE ENDS HERE---
 		}
 		output.updatePixels();
@@ -412,7 +511,7 @@ function filterImage(input, output, kernel, ) {
 	let op = output.pixels;
 	let index = 0;
 	for (let y = 0; y < input.height; y++) {
-		for (let x = 0; x < input.width; x++, index += 4) {
+		for (let x = 0; x < input.width; x++ , index += 4) {
 			op.set(applyKernel(input, x, y, kernel), index);
 		}
 	}
